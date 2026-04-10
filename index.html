@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Experiencias 360</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- A-Frame 1.4.2: version estable y ampliamente probada en VR -->
+  <script src="https://unpkg.com/aframe@1.4.2/dist/aframe-master.min.js"></script>
+
+  <script>
+    /*
+      Componente personalizado para manejar los clics en VR.
+      Se registra ANTES de que se cargue la escena.
+    */
+    AFRAME.registerComponent('click-handler', {
+      schema: { target: { type: 'string' } },
+      init: function () {
+        var self = this;
+        this.el.addEventListener('click', function () {
+          var targetId = self.data.target;
+          if (targetId === 'vid1') reproducirVideo(1);
+          else if (targetId === 'vid2') reproducirVideo(2);
+          else if (targetId === 'menu') volverAlMenu();
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+<a-scene
+  xr-mode-ui="enabled: true"
+  vr-mode-ui="enabled: true"
+  renderer="colorManagement: true; physicallyCorrectLights: false"
+  loading-screen="dotsColor: white; backgroundColor: black">
+
+  <a-assets timeout="60000">
+    <img   id="fondoMenu" src="fondo_principal.jpg">
+    <img   id="thumb1"    src="miniatura_video1.png">
+    <img   id="thumb2"    src="miniatura_video2.png">
+
+    <video id="vid1"
+           src="video_aventura.mp4"
+           preload="auto"
+           loop
+           crossorigin="anonymous"
+           playsinline
+           webkit-playsinline>
+    </video>
+    <video id="vid2"
+           src="video_playa.mp4"
+           preload="auto"
+           loop
+           crossorigin="anonymous"
+           playsinline
+           webkit-playsinline>
+    </video>
+  </a-assets>
+
+  <!-- SKY: imagen de fondo 360 -->
+  <a-sky id="sky" src="#fondoMenu" rotation="0 -90 0"></a-sky>
+
+  <!-- ======================================================= -->
+  <!--  MENU PRINCIPAL                                         -->
+  <!-- ======================================================= -->
+  <a-entity id="menuPrincipal" position="0 1.6 -3">
+
+    <!-- Titulo -->
+    <a-text
+      value="MIS EXPERIENCIAS 360"
+      align="center"
+      position="0 0.9 0"
+      width="4"
+      color="white">
+    </a-text>
+
+    <!-- CARD 1: Aventura -->
+    <a-image
+      id="card1"
+      src="#thumb1"
+      width="1.4"
+      height="0.85"
+      position="-1.0 0 0"
+      class="clickable"
+      click-handler="target: vid1">
+      <a-text
+        value="Aventura"
+        align="center"
+        position="0 -0.55 0.05"
+        width="2.5"
+        color="white">
+      </a-text>
+    </a-image>
+
+    <!-- CARD 2: Relax -->
+    <a-image
+      id="card2"
+      src="#thumb2"
+      width="1.4"
+      height="0.85"
+      position="1.0 0 0"
+      class="clickable"
+      click-handler="target: vid2">
+      <a-text
+        value="Relax"
+        align="center"
+        position="0 -0.55 0.05"
+        width="2.5"
+        color="white">
+      </a-text>
+    </a-image>
+
+  </a-entity>
+
+
+  <!-- ======================================================= -->
+  <!--  BOTON VOLVER (oculto al inicio)                        -->
+  <!-- ======================================================= -->
+  <a-entity id="botonVolver" position="0 0.6 -2.5" visible="false">
+    <a-plane
+      color="#111111"
+      opacity="0.75"
+      width="1.2"
+      height="0.4"
+      class="clickable"
+      click-handler="target: menu">
+    </a-plane>
+    <a-text
+      value="Volver al Menu"
+      align="center"
+      position="0 0 0.05"
+      width="3"
+      color="white">
+    </a-text>
+  </a-entity>
+
+
+  <!-- ======================================================= -->
+  <!--  CAMARA + CURSOR                                        -->
+  <!-- ======================================================= -->
+  <a-entity camera look-controls wasd-controls position="0 1.6 0">
+    <a-cursor
+      id="cursor"
+      color="#00d4ff"
+      opacity="0.85"
+      fuse="false"
+      raycaster="objects: .clickable; recursive: false"
+      animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"
+      animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
+      animation__mouseleave="property: scale; startEvents: mouseleave; easing: easeInCubic; dur: 500; to: 1 1 1">
+    </a-cursor>
+  </a-entity>
+
+</a-scene>
+
+<script>
+  var sky          = document.getElementById('sky');
+  var menuEl       = document.getElementById('menuPrincipal');
+  var botonVolver  = document.getElementById('botonVolver');
+  var vid1El       = document.getElementById('vid1');
+  var vid2El       = document.getElementById('vid2');
+  var videoActual  = null;
+
+  function reproducirVideo(num) {
+    if (videoActual) {
+      videoActual.pause();
+      videoActual.currentTime = 0;
+    }
+
+    var videoEl = (num === 1) ? vid1El : vid2El;
+    videoActual = videoEl;
+
+    /*
+      Forma correcta de poner un VIDEO en a-sky:
+      se pasa el elemento DOM directamente al material.
+    */
+    sky.setAttribute('material', {
+      src:    videoEl,
+      color:  '#ffffff',
+      shader: 'flat'
+    });
+
+    videoEl.play().catch(function (e) {
+      console.warn('Autoplay bloqueado por el navegador:', e);
+    });
+
+    menuEl.setAttribute('visible', 'false');
+    botonVolver.setAttribute('visible', 'true');
+  }
+
+  function volverAlMenu() {
+    if (videoActual) {
+      videoActual.pause();
+      videoActual.currentTime = 0;
+      videoActual = null;
+    }
+
+    sky.setAttribute('material', {
+      src:    document.getElementById('fondoMenu'),
+      color:  '#ffffff',
+      shader: 'flat'
+    });
+
+    menuEl.setAttribute('visible', 'true');
+    botonVolver.setAttribute('visible', 'false');
+  }
+
+  ['card1', 'card2'].forEach(function (id) {
+    var el = document.getElementById(id);
+    el.addEventListener('mouseenter', function () {
+      el.setAttribute('scale', '1.08 1.08 1.08');
+    });
+    el.addEventListener('mouseleave', function () {
+      el.setAttribute('scale', '1 1 1');
+    });
+  });
+</script>
+</body>
+</html>
